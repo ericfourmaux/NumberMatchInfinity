@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Number Match Infinity</title>
+    <title>Number Match Infinity - Pro</title>
     <style>
         :root {
             --bg: #0f172a;
             --grid-bg: #1e293b;
+            --cell-empty: rgba(255, 255, 255, 0.03);
             --text: #f8fafc;
-            /* Couleurs vives pour les chiffres */
             --c1: #ff4d4d; --c2: #2ecc71; --c3: #f1c40f; 
             --c4: #9b59b6; --c5: #e67e22; --c6: #1abc9c; 
             --c7: #e84393; --c8: #3498db; --c9: #a29bfe;
@@ -18,138 +18,151 @@
         body, html {
             margin: 0; padding: 0; width: 100%; height: 100%;
             font-family: 'Inter', system-ui, sans-serif;
-            background: radial-gradient(circle at top right, #1e293b, #0f172a);
-            color: var(--text);
-            overflow: hidden;
+            background: var(--bg); color: var(--text);
+            overflow: hidden; touch-action: manipulation;
         }
 
-        /* --- ACCUEIL --- */
-        #home-screen {
-            position: fixed; inset: 0; z-index: 1000;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            background: linear-gradient(rgba(15,23,42,0.8), rgba(15,23,42,0.8)), url('NumberMatchInfinity.png');
-            background-size: cover; background-position: center;
-            transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-
-        .glass-panel {
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(20px);
-            padding: 40px; border-radius: 35px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            text-align: center; width: 85%; max-width: 380px;
-            box-shadow: 0 25px 50px rgba(0,0,0,0.5);
-        }
-
-        .btn-main {
-            width: 100%; padding: 18px; margin: 10px 0; border: none;
-            border-radius: 20px; font-size: 1.2rem; font-weight: 800;
-            color: white; cursor: pointer; transition: 0.2s;
-        }
-        .btn-new { background: linear-gradient(135deg, #6366f1, #a855f7); }
-        .btn-resume { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); }
-
-        /* --- JEU --- */
+        /* --- UI ELEMENTS --- */
         .game-header {
-            padding: 20px; display: flex; justify-content: space-between; align-items: center;
-            background: rgba(15,23,42,0.9); border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding: 15px 20px; display: flex; justify-content: space-between; align-items: center;
+            background: rgba(15,23,42,0.95); border-bottom: 1px solid rgba(255,255,255,0.1);
+            z-index: 100;
         }
 
-        #grid-container { flex: 1; overflow-y: auto; padding: 20px 15px 150px; }
+        .stat { font-weight: 900; color: var(--c3); font-size: 1.2rem; }
+
+        #grid-container {
+            flex: 1; overflow-y: auto; padding: 20px 10px 180px;
+            display: flex; flex-direction: column; align-items: center;
+            height: calc(100vh - 70px);
+        }
+
         #grid {
             display: grid; grid-template-columns: repeat(9, 1fr);
-            gap: 10px; width: 100%; max-width: 500px; margin: 0 auto;
+            gap: 6px; width: 100%; max-width: 450px;
+            background: rgba(255,255,255,0.02); padding: 5px; border-radius: 10px;
         }
 
         .cell {
-            aspect-ratio: 1; border-radius: 12px;
+            aspect-ratio: 1; border-radius: 6px;
             display: flex; align-items: center; justify-content: center;
-            font-size: 1.5rem; font-weight: 900;
-            background: var(--grid-bg);
-            box-shadow: 4px 4px 8px rgba(0,0,0,0.3), inset 1px 1px 2px rgba(255,255,255,0.1);
+            font-size: 1.3rem; font-weight: 900;
+            background: var(--cell-empty);
             transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border: 1px solid rgba(255,255,255,0.02);
         }
 
-        /* Couleurs dynamiques */
+        /* Chiffres actifs */
+        .cell.active { background: var(--grid-bg); box-shadow: 0 2px 4px rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05); }
+        .cell.selected { background: #fff !important; color: #000 !important; transform: scale(1.1); box-shadow: 0 0 15px #fff; z-index: 5; }
+        
+        /* Obstacles */
+        .cell.obstacle { background: #475569; color: #94a3b8; font-size: 1rem; opacity: 1; border: 2px solid #334155; }
+
         .v1 { color: var(--c1); } .v2 { color: var(--c2); } .v3 { color: var(--c3); }
         .v4 { color: var(--c4); } .v5 { color: var(--c5); } .v6 { color: var(--c6); }
         .v7 { color: var(--c7); } .v8 { color: var(--c8); } .v9 { color: var(--c9); }
 
-        .cell.selected {
-            background: #f1c40f; color: #1a1a1a;
-            transform: scale(1.15); box-shadow: 0 0 20px #f1c40f; z-index: 10;
-        }
-
-        .cell.hidden { opacity: 0.05; transform: scale(0.8); pointer-events: none; }
-
         .toolbar {
-            position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
-            display: flex; gap: 12px; background: rgba(15, 23, 42, 0.9);
-            padding: 15px 25px; border-radius: 30px; border: 1px solid rgba(255,255,255,0.1);
+            position: fixed; bottom: 25px; left: 50%; transform: translateX(-50%);
+            display: flex; gap: 10px; background: rgba(15, 23, 42, 0.95);
+            padding: 12px 20px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
         }
 
-        .tool {
-            background: #6366f1; border: none; color: white; padding: 10px 18px;
-            border-radius: 15px; font-weight: bold; font-size: 0.9rem;
+        .btn {
+            background: #4f46e5; border: none; color: white; padding: 12px;
+            border-radius: 12px; font-weight: bold; font-size: 0.8rem; min-width: 80px;
+        }
+
+        #lvl-alert {
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: var(--c2); color: #000; padding: 20px 40px; border-radius: 20px;
+            font-weight: 900; font-size: 1.5rem; display: none; z-index: 1000;
         }
     </style>
 </head>
-<body>
+<body style="display: flex; flex-direction: column;">
 
-    <div id="home-screen">
-        <div class="glass-panel">
-            <h1 style="font-size: 2.5rem; margin-bottom: 30px; line-height: 1;">NUMBER<br><span style="color:var(--c2)">MATCH</span></h1>
-            <button id="resume-btn" class="btn-main btn-resume" style="display:none" onclick="start(true)">REPRENDRE</button>
-            <button class="btn-main btn-new" onclick="start(false)">NOUVEAU JEU</button>
-        </div>
+    <div class="game-header">
+        <div>NIVEAU <span id="lvl" class="stat">1</span></div>
+        <div style="text-align: right;">SCORE <span id="scr" class="stat">0</span></div>
     </div>
 
-    <div id="game-interface" style="display:flex; flex-direction:column; height:100vh;">
-        <div class="game-header">
-            <div>SCORE: <span id="score" style="color:var(--c3); font-weight:900;">0</span></div>
-            <button onclick="location.reload()" style="background:none; border:none; color:white; opacity:0.5;">MENU</button>
-        </div>
-        <div id="grid-container">
-            <div id="grid"></div>
-        </div>
-        <div class="toolbar">
-            <button class="tool" onclick="addRows()">➕ LIGNES</button>
-            <button class="tool" onclick="getHint()">💡 AIDE</button>
-            <button class="tool" onclick="bomb()" style="background:var(--c1)">💣 BOMBE</button>
-        </div>
+    <div id="grid-container">
+        <div id="grid"></div>
+    </div>
+
+    <div id="lvl-alert">NIVEAU RÉUSSI ! 🚀</div>
+
+    <div class="toolbar">
+        <button class="btn" onclick="addRows()">➕ LIGNES</button>
+        <button class="btn" onclick="getHint()">💡 AIDE</button>
+        <button class="btn" style="background:#ef4444" onclick="bomb()">💣 BOMBE</button>
     </div>
 
     <script>
-        let state = { nums: [], score: 0, selected: null };
+        let state = { nums: [], score: 0, level: 1, selected: null };
 
-        function start(resume) {
-            if (resume) {
-                state = JSON.parse(localStorage.getItem('numMatch_save'));
-            } else {
-                state.nums = Array.from({length: 27}, () => Math.floor(Math.random()*9)+1);
-                state.score = 0;
+        function initLevel() {
+            // Génération de base : 27 chiffres
+            state.nums = Array.from({length: 27}, () => Math.floor(Math.random()*9)+1);
+            
+            // Ajout d'obstacles tous les 10 niveaux (ex: Niv 10, 20, 30...)
+            if (state.level >= 10 && state.level % 10 === 0) {
+                const obstacleCount = Math.floor(state.level / 10) * 2;
+                for(let i=0; i<obstacleCount; i++) {
+                    let pos = Math.floor(Math.random() * state.nums.length);
+                    state.nums[pos] = "🔒"; 
+                }
             }
-            document.getElementById('home-screen').style.transform = 'translateY(-100%)';
             render();
         }
 
         function render() {
+            // 1. Suppression des lignes vides (toutes les 9 cases consécutives nulles)
+            cleanEmptyLines();
+
             const grid = document.getElementById('grid');
             grid.innerHTML = '';
+            
             state.nums.forEach((n, i) => {
                 const cell = document.createElement('div');
-                cell.className = `cell ${n === null ? 'hidden' : 'v'+n}`;
+                const isNum = typeof n === 'number';
+                const isObs = n === "🔒";
+                
+                cell.className = `cell ${isNum ? 'active v'+n : ''} ${isObs ? 'obstacle' : ''}`;
                 if (i === state.selected) cell.classList.add('selected');
+                
                 cell.textContent = n || '';
                 cell.onclick = () => handleTap(i);
                 grid.appendChild(cell);
             });
-            document.getElementById('score').innerText = state.score;
-            localStorage.setItem('numMatch_save', JSON.stringify(state));
+
+            document.getElementById('scr').innerText = state.score;
+            document.getElementById('lvl').innerText = state.level;
+            
+            // Vérification victoire (si plus aucun nombre)
+            if (state.nums.every(n => typeof n !== 'number')) {
+                nextLevel();
+            }
+        }
+
+        function cleanEmptyLines() {
+            // On vérifie par blocs de 9
+            for (let i = 0; i <= state.nums.length - 9; i += 9) {
+                let chunk = state.nums.slice(i, i + 9);
+                if (chunk.every(n => n === null)) {
+                    state.nums.splice(i, 9);
+                    i -= 9; // On recule pour vérifier la nouvelle ligne décalée
+                }
+            }
         }
 
         function handleTap(i) {
-            if (state.nums[i] === null) return;
+            const val = state.nums[i];
+            if (typeof val !== 'number') return;
+
             if (state.selected === null) {
                 state.selected = i;
             } else if (state.selected === i) {
@@ -175,67 +188,63 @@
             let start = Math.min(i1, i2);
             let end = Math.max(i1, i2);
 
-            // 1. LOGIQUE LINÉAIRE (Horizontale & Saut de ligne)
+            // Coordonnées pour calculs
+            const x1 = i1 % 9, y1 = Math.floor(i1 / 9);
+            const x2 = i2 % 9, y2 = Math.floor(i2 / 9);
+
+            // 1. Horizontal (sur la même ligne ou lecture continue)
             let blockedLinear = false;
             for (let k = start + 1; k < end; k++) {
                 if (state.nums[k] !== null) { blockedLinear = true; break; }
             }
             if (!blockedLinear) return true;
 
-            // 2. LOGIQUE VERTICALE
-            if (i1 % 9 === i2 % 9) {
-                let blockedVertical = false;
+            // 2. Vertical
+            if (x1 === x2) {
+                let blockedV = false;
                 for (let k = start + 9; k < end; k += 9) {
-                    if (state.nums[k] !== null) { blockedVertical = true; break; }
+                    if (state.nums[k] !== null) { blockedV = true; break; }
                 }
-                if (!blockedVertical) return true;
+                if (!blockedV) return true;
             }
 
-            // 3. LOGIQUE DIAGONALE (Infaillible)
-            const x1 = i1 % 9, y1 = Math.floor(i1 / 9);
-            const x2 = i2 % 9, y2 = Math.floor(i2 / 9);
-            
+            // 3. Diagonale
             if (Math.abs(x1 - x2) === Math.abs(y1 - y2)) {
                 const stepX = x2 > x1 ? 1 : -1;
                 const stepY = y2 > y1 ? 1 : -1;
-                let curX = x1 + stepX;
-                let curY = y1 + stepY;
-                let blockedDiag = false;
-                
-                while (curX !== x2 && curY !== y2) {
-                    if (state.nums[curY * 9 + curX] !== null) {
-                        blockedDiag = true;
-                        break;
-                    }
-                    curX += stepX;
-                    curY += stepY;
+                let cx = x1 + stepX;
+                let cy = y1 + stepY;
+                let blockedD = false;
+                while (cx !== x2) {
+                    if (state.nums[cy * 9 + cx] !== null) { blockedD = true; break; }
+                    cx += stepX; cy += stepY;
                 }
-                if (!blockedDiag) return true;
+                if (!blockedD) return true;
             }
-
             return false;
         }
 
         function addRows() {
-            const active = state.nums.filter(n => n !== null);
+            const active = state.nums.filter(n => typeof n === 'number');
             state.nums = [...state.nums, ...active];
             render();
         }
 
         function bomb() {
-            let c = 0;
-            while(c < 5 && state.nums.some(n => n !== null)) {
-                let r = Math.floor(Math.random()*state.nums.length);
-                if(state.nums[r]) { state.nums[r] = null; c++; }
+            let targets = state.nums.map((n, i) => typeof n === 'number' ? i : null).filter(n => n !== null);
+            for(let i=0; i<Math.min(5, targets.length); i++) {
+                let randIdx = Math.floor(Math.random() * targets.length);
+                state.nums[targets[randIdx]] = null;
+                targets.splice(randIdx, 1);
             }
             render();
         }
 
         function getHint() {
             for (let i = 0; i < state.nums.length; i++) {
-                if (!state.nums[i]) continue;
+                if (typeof state.nums[i] !== 'number') continue;
                 for (let j = i + 1; j < state.nums.length; j++) {
-                    if (state.nums[j] && checkMatch(i, j)) {
+                    if (typeof state.nums[j] === 'number' && checkMatch(i, j)) {
                         state.selected = i;
                         render(); return;
                     }
@@ -243,9 +252,17 @@
             }
         }
 
-        if (localStorage.getItem('numMatch_save')) {
-            document.getElementById('resume-btn').style.display = 'block';
+        function nextLevel() {
+            const alert = document.getElementById('lvl-alert');
+            alert.style.display = 'block';
+            setTimeout(() => {
+                alert.style.display = 'none';
+                state.level++;
+                initLevel();
+            }, 1500);
         }
+
+        initLevel();
     </script>
 </body>
 </html>
