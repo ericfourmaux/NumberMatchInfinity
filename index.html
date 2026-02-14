@@ -3,13 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Number Match Infinity - Pro</title>
+    <meta name="theme-color" content="#0f172a">
+    <link rel="manifest" href="manifest.json">
+    <title>Number Match Infinity</title>
     <style>
         :root {
             --bg: #0f172a;
             --grid-bg: #1e293b;
             --cell-empty: rgba(255, 255, 255, 0.03);
             --text: #f8fafc;
+            --accent: #10b981;
+            /* Couleurs Chiffres */
             --c1: #ff4d4d; --c2: #2ecc71; --c3: #f1c40f; 
             --c4: #9b59b6; --c5: #e67e22; --c6: #1abc9c; 
             --c7: #e84393; --c8: #3498db; --c9: #a29bfe;
@@ -22,11 +26,35 @@
             overflow: hidden; touch-action: manipulation;
         }
 
-        /* --- UI ELEMENTS --- */
+        /* --- ÉCRAN D'ACCUEIL --- */
+        #home-screen {
+            position: fixed; inset: 0; z-index: 1000;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            background: linear-gradient(rgba(15,23,42,0.8), rgba(15,23,42,0.8)), url('bg.png'), var(--bg);
+            background-size: cover; background-position: center;
+            transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .menu-card {
+            background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px);
+            padding: 40px; border-radius: 35px; border: 1px solid rgba(255,255,255,0.1);
+            text-align: center; width: 85%; max-width: 380px;
+        }
+
+        .btn-menu {
+            width: 100%; padding: 18px; margin: 10px 0; border: none;
+            border-radius: 20px; font-size: 1.2rem; font-weight: 800;
+            color: white; cursor: pointer; transition: 0.2s;
+        }
+        .btn-new { background: linear-gradient(135deg, #6366f1, #a855f7); }
+        .btn-resume { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); }
+
+        /* --- INTERFACE JEU --- */
+        #game-interface { display: flex; flex-direction: column; height: 100vh; opacity: 0; transition: 0.5s; }
+
         .game-header {
             padding: 15px 20px; display: flex; justify-content: space-between; align-items: center;
             background: rgba(15,23,42,0.95); border-bottom: 1px solid rgba(255,255,255,0.1);
-            z-index: 100;
         }
 
         .stat { font-weight: 900; color: var(--c3); font-size: 1.2rem; }
@@ -34,13 +62,12 @@
         #grid-container {
             flex: 1; overflow-y: auto; padding: 20px 10px 180px;
             display: flex; flex-direction: column; align-items: center;
-            height: calc(100vh - 70px);
         }
 
         #grid {
             display: grid; grid-template-columns: repeat(9, 1fr);
             gap: 6px; width: 100%; max-width: 450px;
-            background: rgba(255,255,255,0.02); padding: 5px; border-radius: 10px;
+            background: rgba(255,255,255,0.02); padding: 8px; border-radius: 12px;
         }
 
         .cell {
@@ -49,15 +76,12 @@
             font-size: 1.3rem; font-weight: 900;
             background: var(--cell-empty);
             transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            border: 1px solid rgba(255,255,255,0.02);
+            border: 1px solid rgba(255,255,255,0.01);
         }
 
-        /* Chiffres actifs */
         .cell.active { background: var(--grid-bg); box-shadow: 0 2px 4px rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.05); }
-        .cell.selected { background: #fff !important; color: #000 !important; transform: scale(1.1); box-shadow: 0 0 15px #fff; z-index: 5; }
-        
-        /* Obstacles */
-        .cell.obstacle { background: #475569; color: #94a3b8; font-size: 1rem; opacity: 1; border: 2px solid #334155; }
+        .cell.selected { background: #fff !important; color: #000 !important; transform: scale(1.15); z-index: 5; box-shadow: 0 0 15px #fff; }
+        .cell.obstacle { background: #475569; color: #94a3b8; font-size: 1rem; border: 2px solid #334155; }
 
         .v1 { color: var(--c1); } .v2 { color: var(--c2); } .v3 { color: var(--c3); }
         .v4 { color: var(--c4); } .v5 { color: var(--c5); } .v6 { color: var(--c6); }
@@ -66,102 +90,139 @@
         .toolbar {
             position: fixed; bottom: 25px; left: 50%; transform: translateX(-50%);
             display: flex; gap: 10px; background: rgba(15, 23, 42, 0.95);
-            padding: 12px 20px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1);
-            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+            padding: 12px 20px; border-radius: 25px; border: 1px solid rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
         }
 
-        .btn {
-            background: #4f46e5; border: none; color: white; padding: 12px;
-            border-radius: 12px; font-weight: bold; font-size: 0.8rem; min-width: 80px;
+        .btn-tool {
+            background: #4f46e5; border: none; color: white; padding: 10px;
+            border-radius: 15px; font-weight: bold; font-size: 0.8rem; min-width: 75px;
         }
 
         #lvl-alert {
             position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            background: var(--c2); color: #000; padding: 20px 40px; border-radius: 20px;
-            font-weight: 900; font-size: 1.5rem; display: none; z-index: 1000;
+            background: var(--accent); color: #000; padding: 20px 40px; border-radius: 20px;
+            font-weight: 900; font-size: 1.5rem; display: none; z-index: 2000;
         }
+        
+        .particle { position: absolute; pointer-events: none; background: #fff; border-radius: 50%; z-index: 1000; }
     </style>
 </head>
-<body style="display: flex; flex-direction: column;">
+<body>
 
-    <div class="game-header">
-        <div>NIVEAU <span id="lvl" class="stat">1</span></div>
-        <div style="text-align: right;">SCORE <span id="scr" class="stat">0</span></div>
+    <div id="home-screen">
+        <div class="menu-card">
+            <h1 style="font-size: 2.2rem; margin-bottom: 30px;">NUMBER MATCH<br><span style="color:var(--accent)">INFINITY</span></h1>
+            <button id="resume-btn" class="btn-menu btn-resume" style="display:none" onclick="launch(true)">REPRENDRE</button>
+            <button class="btn-menu btn-new" onclick="launch(false)">NOUVEAU JEU</button>
+        </div>
     </div>
 
-    <div id="grid-container">
-        <div id="grid"></div>
+    <div id="game-interface">
+        <div class="game-header">
+            <div>NIVEAU <span id="lvl" class="stat">1</span></div>
+            <button onclick="goToHome()" style="background:none; border:1px solid #555; color:white; border-radius:8px; padding:5px 10px; font-size:0.7rem;">MENU</button>
+            <div style="text-align: right;">SCORE <span id="scr" class="stat">0</span></div>
+        </div>
+
+        <div id="grid-container">
+            <div id="grid"></div>
+        </div>
+
+        <div class="toolbar">
+            <button class="btn-tool" onclick="addRows()">➕ LIGNES</button>
+            <button class="btn-tool" onclick="getHint()">💡 AIDE</button>
+            <button class="btn-tool" style="background:#ef4444" onclick="bomb()">💣 BOMBE</button>
+        </div>
     </div>
 
     <div id="lvl-alert">NIVEAU RÉUSSI ! 🚀</div>
 
-    <div class="toolbar">
-        <button class="btn" onclick="addRows()">➕ LIGNES</button>
-        <button class="btn" onclick="getHint()">💡 AIDE</button>
-        <button class="btn" style="background:#ef4444" onclick="bomb()">💣 BOMBE</button>
-    </div>
-
     <script>
         let state = { nums: [], score: 0, level: 1, selected: null };
+        const home = document.getElementById('home-screen');
+        const game = document.getElementById('game-interface');
 
-        function initLevel() {
-            // Génération de base : 27 chiffres
-            state.nums = Array.from({length: 27}, () => Math.floor(Math.random()*9)+1);
-            
-            // Ajout d'obstacles tous les 10 niveaux (ex: Niv 10, 20, 30...)
-            if (state.level >= 10 && state.level % 10 === 0) {
-                const obstacleCount = Math.floor(state.level / 10) * 2;
-                for(let i=0; i<obstacleCount; i++) {
-                    let pos = Math.floor(Math.random() * state.nums.length);
-                    state.nums[pos] = "🔒"; 
-                }
+        // --- MOTEUR AUDIO ---
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playSfx(freq, type = 'sine', duration = 0.1) {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            osc.start(); osc.stop(audioCtx.currentTime + duration);
+        }
+
+        // --- NAVIGATION ---
+        function launch(resume) {
+            if (!resume) {
+                state.level = 1; state.score = 0;
+                initLevel();
             }
+            home.style.transform = 'translateY(-100%)';
+            game.style.opacity = '1';
             render();
         }
 
-        function render() {
-            // 1. Suppression des lignes vides (toutes les 9 cases consécutives nulles)
-            cleanEmptyLines();
+        function goToHome() {
+            home.style.transform = 'translateY(0)';
+            checkSave();
+        }
 
-            const grid = document.getElementById('grid');
-            grid.innerHTML = '';
+        // --- LOGIQUE JEU ---
+        function initLevel() {
+            state.nums = Array.from({length: 27}, () => Math.floor(Math.random()*9)+1);
+            // Obstacles tous les 10 niveaux
+            if (state.level >= 10 && state.level % 10 === 0) {
+                for(let i=0; i < (state.level/10)*2; i++) {
+                    state.nums[Math.floor(Math.random()*state.nums.length)] = "🔒";
+                }
+            }
+            state.selected = null;
+        }
+
+        function render() {
+            cleanLines();
+            const gridEl = document.getElementById('grid');
+            gridEl.innerHTML = '';
             
             state.nums.forEach((n, i) => {
                 const cell = document.createElement('div');
                 const isNum = typeof n === 'number';
-                const isObs = n === "🔒";
-                
-                cell.className = `cell ${isNum ? 'active v'+n : ''} ${isObs ? 'obstacle' : ''}`;
+                cell.className = `cell ${isNum ? 'active v'+n : ''} ${n === "🔒" ? 'obstacle' : ''}`;
                 if (i === state.selected) cell.classList.add('selected');
-                
                 cell.textContent = n || '';
-                cell.onclick = () => handleTap(i);
-                grid.appendChild(cell);
+                cell.onclick = (e) => handleTap(i, e);
+                gridEl.appendChild(cell);
             });
 
             document.getElementById('scr').innerText = state.score;
             document.getElementById('lvl').innerText = state.level;
             
-            // Vérification victoire (si plus aucun nombre)
-            if (state.nums.every(n => typeof n !== 'number')) {
-                nextLevel();
+            if (state.nums.length > 0 && state.nums.every(n => typeof n !== 'number')) {
+                victory();
             }
+            localStorage.setItem('numMatch_PWA_Save', JSON.stringify(state));
         }
 
-        function cleanEmptyLines() {
-            // On vérifie par blocs de 9
+        function cleanLines() {
             for (let i = 0; i <= state.nums.length - 9; i += 9) {
                 let chunk = state.nums.slice(i, i + 9);
-                if (chunk.every(n => n === null)) {
+                if (chunk.length === 9 && chunk.every(n => n === null)) {
                     state.nums.splice(i, 9);
-                    i -= 9; // On recule pour vérifier la nouvelle ligne décalée
+                    playSfx(150, 'square', 0.2); // Son de ligne supprimée
+                    i -= 9;
                 }
             }
         }
 
-        function handleTap(i) {
-            const val = state.nums[i];
-            if (typeof val !== 'number') return;
+        function handleTap(i, e) {
+            if (typeof state.nums[i] !== 'number') return;
+            playSfx(440, 'sine', 0.05);
 
             if (state.selected === null) {
                 state.selected = i;
@@ -169,74 +230,73 @@
                 state.selected = null;
             } else {
                 if (checkMatch(state.selected, i)) {
+                    popEffect(e.clientX, e.clientY);
                     state.nums[state.selected] = null;
                     state.nums[i] = null;
                     state.score += 10;
                     state.selected = null;
+                    playSfx(880, 'triangle', 0.2);
                 } else {
                     state.selected = i;
+                    playSfx(220, 'sine', 0.1);
                 }
             }
             render();
         }
 
         function checkMatch(i1, i2) {
-            const v1 = state.nums[i1];
-            const v2 = state.nums[i2];
+            const v1 = state.nums[i1], v2 = state.nums[i2];
             if (v1 !== v2 && v1 + v2 !== 10) return false;
 
-            let start = Math.min(i1, i2);
-            let end = Math.max(i1, i2);
-
-            // Coordonnées pour calculs
+            const start = Math.min(i1, i2), end = Math.max(i1, i2);
             const x1 = i1 % 9, y1 = Math.floor(i1 / 9);
             const x2 = i2 % 9, y2 = Math.floor(i2 / 9);
 
-            // 1. Horizontal (sur la même ligne ou lecture continue)
-            let blockedLinear = false;
-            for (let k = start + 1; k < end; k++) {
-                if (state.nums[k] !== null) { blockedLinear = true; break; }
-            }
-            if (!blockedLinear) return true;
+            // 1. Linéaire
+            let blockedL = false;
+            for (let k = start + 1; k < end; k++) { if (state.nums[k] !== null) { blockedL = true; break; } }
+            if (!blockedL) return true;
 
             // 2. Vertical
             if (x1 === x2) {
                 let blockedV = false;
-                for (let k = start + 9; k < end; k += 9) {
-                    if (state.nums[k] !== null) { blockedV = true; break; }
-                }
+                for (let k = start + 9; k < end; k += 9) { if (state.nums[k] !== null) { blockedV = true; break; } }
                 if (!blockedV) return true;
             }
 
             // 3. Diagonale
             if (Math.abs(x1 - x2) === Math.abs(y1 - y2)) {
-                const stepX = x2 > x1 ? 1 : -1;
-                const stepY = y2 > y1 ? 1 : -1;
-                let cx = x1 + stepX;
-                let cy = y1 + stepY;
+                const sx = x2 > x1 ? 1 : -1, sy = y2 > y1 ? 1 : -1;
+                let cx = x1 + sx, cy = y1 + sy;
                 let blockedD = false;
                 while (cx !== x2) {
                     if (state.nums[cy * 9 + cx] !== null) { blockedD = true; break; }
-                    cx += stepX; cy += stepY;
+                    cx += sx; cy += sy;
                 }
                 if (!blockedD) return true;
             }
             return false;
         }
 
+        // --- OUTILS ---
         function addRows() {
             const active = state.nums.filter(n => typeof n === 'number');
-            state.nums = [...state.nums, ...active];
-            render();
+            if (active.length > 0) {
+                state.nums = [...state.nums, ...active];
+                playSfx(300, 'sawtooth', 0.1);
+                render();
+            }
         }
 
         function bomb() {
-            let targets = state.nums.map((n, i) => typeof n === 'number' ? i : null).filter(n => n !== null);
+            let targets = state.nums.map((n, idx) => typeof n === 'number' ? idx : null).filter(n => n !== null);
+            if (targets.length === 0) return;
             for(let i=0; i<Math.min(5, targets.length); i++) {
-                let randIdx = Math.floor(Math.random() * targets.length);
-                state.nums[targets[randIdx]] = null;
-                targets.splice(randIdx, 1);
+                let r = Math.floor(Math.random()*targets.length);
+                state.nums[targets[r]] = null;
+                targets.splice(r, 1);
             }
+            playSfx(100, 'sawtooth', 0.4);
             render();
         }
 
@@ -246,23 +306,48 @@
                 for (let j = i + 1; j < state.nums.length; j++) {
                     if (typeof state.nums[j] === 'number' && checkMatch(i, j)) {
                         state.selected = i;
+                        playSfx(600, 'sine', 0.2);
                         render(); return;
                     }
                 }
             }
         }
 
-        function nextLevel() {
+        function victory() {
             const alert = document.getElementById('lvl-alert');
             alert.style.display = 'block';
+            playSfx(523, 'sine', 0.1); playSfx(659, 'sine', 0.1); playSfx(783, 'sine', 0.3);
             setTimeout(() => {
                 alert.style.display = 'none';
                 state.level++;
                 initLevel();
+                render();
             }, 1500);
         }
 
-        initLevel();
+        function popEffect(x, y) {
+            for (let i = 0; i < 8; i++) {
+                const p = document.createElement('div');
+                p.className = 'particle';
+                p.style.left = x + 'px'; p.style.top = y + 'px';
+                p.style.width = p.style.height = Math.random()*6+4 + 'px';
+                document.body.appendChild(p);
+                const a = Math.random()*Math.PI*2, d = Math.random()*50+20;
+                p.animate([{transform:'scale(1)', opacity:1}, {transform:`translate(${Math.cos(a)*d}px, ${Math.sin(a)*d}px) scale(0)`, opacity:0}], {duration:600}).onfinish = () => p.remove();
+            }
+        }
+
+        function checkSave() {
+            const saved = localStorage.getItem('numMatch_PWA_Save');
+            if (saved) {
+                state = JSON.parse(saved);
+                document.getElementById('resume-btn').style.display = 'block';
+            }
+        }
+
+        // Init
+        checkSave();
+        if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
     </script>
 </body>
 </html>
