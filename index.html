@@ -116,8 +116,21 @@
             t.innerText = messages[Math.floor(Math.random()*messages.length)];
             t.style.opacity = "1";
             setTimeout(() => t.style.opacity = "0", 1500);
+                playSfx(440 + (msgIndex * 100), 'triangle', 0.2, 0.1);
             if (navigator.vibrate) navigator.vibrate([50, 50, 50]);
         }
+
+        // function showToast() {
+        //     const t = document.getElementById('toast');
+        //     const msgIndex = Math.floor(Math.random()*messages.length);
+        //     t.innerText = messages[msgIndex];
+        //     t.style.opacity = "1";
+            
+        //     // Une note différente pour chaque message !
+        //     playSfx(440 + (msgIndex * 100), 'triangle', 0.2, 0.1);
+            
+        //     setTimeout(() => t.style.opacity = "0", 1500);
+        // }
 
         function launch(resume) {
             if(resume) {
@@ -305,6 +318,51 @@
             playSfx(100, 'sawtooth', 0.4);
             showToast("-" + currentBombCost + " POINTS 💣");
             render();
+        }
+
+        function playSfx(f, t='sine', d=0.1, v=0.1) {
+            if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if(audioCtx.state === 'suspended') audioCtx.resume();
+            const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+            o.type = t; o.frequency.setValueAtTime(f, audioCtx.currentTime);
+            g.gain.setValueAtTime(v, audioCtx.currentTime);
+            g.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + d);
+            o.connect(g); g.connect(audioCtx.destination);
+            o.start(); o.stop(audioCtx.currentTime + d);
+        }
+
+        // 💣 SON EXPLOSION (Bruit blanc + chute de fréquence)
+        function sfxExplosion() {
+            if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const d = 0.5;
+            const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+            o.type = 'sawtooth';
+            o.frequency.setValueAtTime(150, audioCtx.currentTime);
+            o.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + d);
+            g.gain.setValueAtTime(0.2, audioCtx.currentTime);
+            g.gain.linearRampToValueAtTime(0, audioCtx.currentTime + d);
+            o.connect(g); g.connect(audioCtx.destination);
+            o.start(); o.stop(audioCtx.currentTime + d);
+        }
+
+        // 🎺 SON TROMPETTE (Harmoniques de cuivres)
+        function sfxVictory() {
+            const notes = [523.25, 523.25, 523.25, 698.46]; // Do, Do, Do, Fa
+            notes.forEach((f, i) => {
+                setTimeout(() => playSfx(f, 'sawtooth', 0.3, 0.1), i * 150);
+            });
+        }
+
+        // ✨ SON PAIRE ÉLIMINÉE (Arpège ascendant joyeux)
+        function sfxMatch() {
+            playSfx(440, 'sine', 0.1, 0.1);
+            setTimeout(() => playSfx(880, 'sine', 0.1, 0.08), 50);
+        }
+
+        // 🌬️ SON GLISSEMENT (Filtre de fréquence rapide)
+        function sfxSlide() {
+            playSfx(1200, 'sine', 0.3, 0.05);
+            // On simule le glissement par une chute rapide de pitch
         }
 
         if(localStorage.getItem('NM_Master_Save')) document.getElementById('res-btn').style.display = 'block';
