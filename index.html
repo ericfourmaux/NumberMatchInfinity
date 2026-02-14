@@ -97,7 +97,8 @@
         let state = { nums: [], score: 0, level: 1, selected: null, hints: [] };
         let audioCtx;
         let lineCounter = 0;
-        const messages = ["BIEN JOUÉ !", "INCROYABLE !", "GÉNIAL !", "QUEL TALENT !", "MAGNIFIQUE !", "BOUM !"];
+        let baseBombCost = 100;
+        const messages = ["BIEN JOUÉ !", "INCROYABLE !", "GÉNIAL !", "QUEL TALENT !", "MAGNIFIQUE !", "BOUUUM !"];
 
         function playSfx(f, t='sine', d=0.1) {
             if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -170,6 +171,29 @@
             if(state.nums.length > 0 && state.nums.every(n => typeof n !== 'number')) {
                 state.level++; newLevel(); render();
             }
+
+            const hasNumbersLeft = state.nums.some(n => typeof n === 'number');
+
+            if (!hasNumbersLeft) {
+                // Petit délai pour laisser l'utilisateur voir la grille vide
+                setTimeout(() => {
+                    state.level++;
+                    showToast("NIVEAU " + state.level + " ! 🚀");
+                    
+                    // Effet sonore de montée en niveau
+                    playSfx(523, 'sine', 0.1); 
+                    setTimeout(() => playSfx(659, 'sine', 0.1), 100);
+                    setTimeout(() => playSfx(783, 'sine', 0.2), 200);
+
+                    newLevel(); // Régénère les chiffres
+                    render();   // Réaffiche la grille
+                }, 600);
+            }
+
+            // Affiche le prix actuel sur le bouton bombe
+            const currentBombCost = baseBombCost + (Math.floor(state.level / 5) * 50);
+            document.querySelector('button[style*="#ef4444"]').innerText = "💣 " + currentBombCost;
+
             localStorage.setItem('NM_Master_Save', JSON.stringify(state));
         }
 
@@ -252,16 +276,35 @@
         }
 
         function bomb() {
+            // Calcul du coût : augmente de 50 points tous les 5 niveaux
+            // Niveau 1-4: 100 | Niveau 5-9: 150 | Niveau 10-14: 200...
+            const currentBombCost = baseBombCost + (Math.floor(state.level / 5) * 50);
+
+            if (state.score < currentBombCost) {
+                showToast("PAS ASSEZ DE POINTS ! (" + currentBombCost + " requis)");
+                playSfx(150, 'sawtooth', 0.2); // Son d'erreur
+                return;
+            }
+
+            // Confirmation et consommation des points
+            state.score -= currentBombCost;
+            
+            // Effets visuels et physiques
             if (navigator.vibrate) navigator.vibrate(200);
             document.getElementById('game-ui').classList.add('shake');
             setTimeout(() => document.getElementById('game-ui').classList.remove('shake'), 300);
             
+            // Logique d'explosion (5 chiffres aléatoires)
             let t = state.nums.map((n, i) => typeof n === 'number' ? i : null).filter(n => n !== null);
             for(let i=0; i<Math.min(5, t.length); i++) {
                 let r = Math.floor(Math.random()*t.length);
-                state.nums[t[r]] = null; t.splice(r, 1);
+                state.nums[t[r]] = null; 
+                t.splice(r, 1);
             }
-            playSfx(100, 'sawtooth', 0.4); render();
+
+            playSfx(100, 'sawtooth', 0.4);
+            showToast("-" + currentBombCost + " POINTS 💣");
+            render();
         }
 
         if(localStorage.getItem('NM_Master_Save')) document.getElementById('res-btn').style.display = 'block';
