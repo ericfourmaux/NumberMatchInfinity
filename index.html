@@ -100,37 +100,58 @@
         let baseBombCost = 100;
         const messages = ["BIEN JOUÉ !", "INCROYABLE !", "GÉNIAL !", "QUEL TALENT !", "MAGNIFIQUE !", "BOUUUM !"];
 
-        function playSfx(f, t='sine', d=0.1) {
+        // --- MOTEUR AUDIO ---
+        function playSfx(f, t='sine', d=0.1, v=0.1) {
             if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             if(audioCtx.state === 'suspended') audioCtx.resume();
             const o = audioCtx.createOscillator(), g = audioCtx.createGain();
-            o.type = t; o.frequency.value = f;
-            g.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            o.type = t; o.frequency.setValueAtTime(f, audioCtx.currentTime);
+            g.gain.setValueAtTime(v, audioCtx.currentTime);
             g.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + d);
             o.connect(g); g.connect(audioCtx.destination);
             o.start(); o.stop(audioCtx.currentTime + d);
         }
 
-        function showToast() {
-            const t = document.getElementById('toast');
-            t.innerText = messages[Math.floor(Math.random()*messages.length)];
-            t.style.opacity = "1";
-            setTimeout(() => t.style.opacity = "0", 1500);
-                playSfx(440 + (msgIndex * 100), 'triangle', 0.2, 0.1);
-            if (navigator.vibrate) navigator.vibrate([50, 50, 50]);
+        function sfxExplosion() {
+            if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const d = 0.5;
+            const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+            o.type = 'sawtooth';
+            o.frequency.setValueAtTime(150, audioCtx.currentTime);
+            o.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + d);
+            g.gain.setValueAtTime(0.2, audioCtx.currentTime);
+            g.gain.linearRampToValueAtTime(0, audioCtx.currentTime + d);
+            o.connect(g); g.connect(audioCtx.destination);
+            o.start(); o.stop(audioCtx.currentTime + d);
         }
 
-        // function showToast() {
-        //     const t = document.getElementById('toast');
-        //     const msgIndex = Math.floor(Math.random()*messages.length);
-        //     t.innerText = messages[msgIndex];
-        //     t.style.opacity = "1";
+        function sfxVictory() {
+            const notes = [523.25, 523.25, 523.25, 698.46]; 
+            notes.forEach((f, i) => {
+                setTimeout(() => playSfx(f, 'sawtooth', 0.3, 0.1), i * 150);
+            });
+        }
+
+        function sfxMatch() {
+            playSfx(440, 'sine', 0.1, 0.1);
+            setTimeout(() => playSfx(880, 'sine', 0.1, 0.08), 50);
+        }
+
+        function sfxSlide() {
+            playSfx(1200, 'sine', 0.3, 0.05);
+        }
+
+        // --- LOGIQUE UI ---
+        function showToast(customMsg) {
+            const t = document.getElementById('toast');
+            const msgIndex = Math.floor(Math.random()*messages.length);
+            t.innerText = customMsg || messages[msgIndex];
+            t.style.opacity = "1";
             
-        //     // Une note différente pour chaque message !
-        //     playSfx(440 + (msgIndex * 100), 'triangle', 0.2, 0.1);
-            
-        //     setTimeout(() => t.style.opacity = "0", 1500);
-        // }
+            playSfx(440 + (msgIndex * 100), 'triangle', 0.2, 0.1);
+            if (navigator.vibrate) navigator.vibrate([50, 50, 50]);
+            setTimeout(() => t.style.opacity = "0", 1500);
+        }
 
         function launch(resume) {
             if(resume) {
@@ -153,13 +174,12 @@
         }
 
         function render() {
-            // Nettoyage lignes
             for (let i = 0; i <= state.nums.length - 9; i += 9) {
                 let chunk = state.nums.slice(i, i + 9);
                 if (chunk.length === 9 && chunk.every(n => n === null)) {
                     state.nums.splice(i, 9);
                     lineCounter++;
-                    playSfx(150, 'square', 0.2);
+                    sfxSlide();
                     if(lineCounter % 6 === 0) showToast();
                     i -= 9;
                 }
@@ -181,29 +201,18 @@
             document.getElementById('scr').innerText = state.score;
             document.getElementById('lvl').innerText = state.level;
             
-            if(state.nums.length > 0 && state.nums.every(n => typeof n !== 'number')) {
-                state.level++; newLevel(); render();
-            }
-
             const hasNumbersLeft = state.nums.some(n => typeof n === 'number');
 
-            if (!hasNumbersLeft) {
-                // Petit délai pour laisser l'utilisateur voir la grille vide
+            if (!hasNumbersLeft && state.nums.length > 0) {
                 setTimeout(() => {
                     state.level++;
                     showToast("NIVEAU " + state.level + " ! 🚀");
-                    
-                    // Effet sonore de montée en niveau
-                    playSfx(523, 'sine', 0.1); 
-                    setTimeout(() => playSfx(659, 'sine', 0.1), 100);
-                    setTimeout(() => playSfx(783, 'sine', 0.2), 200);
-
-                    newLevel(); // Régénère les chiffres
-                    render();   // Réaffiche la grille
+                    sfxVictory();
+                    newLevel();
+                    render();
                 }, 600);
             }
 
-            // Affiche le prix actuel sur le bouton bombe
             const currentBombCost = baseBombCost + (Math.floor(state.level / 5) * 50);
             document.querySelector('button[style*="#ef4444"]').innerText = "💣 " + currentBombCost;
 
@@ -222,7 +231,7 @@
                     spawnFx(e.clientX, e.clientY, state.nums[i]);
                     state.nums[state.selected] = null; state.nums[i] = null;
                     state.score += 10; state.selected = null;
-                    playSfx(880, 'triangle', 0.2);
+                    sfxMatch();
                 } else {
                     state.selected = i; playSfx(220);
                 }
@@ -289,80 +298,25 @@
         }
 
         function bomb() {
-            // Calcul du coût : augmente de 50 points tous les 5 niveaux
-            // Niveau 1-4: 100 | Niveau 5-9: 150 | Niveau 10-14: 200...
             const currentBombCost = baseBombCost + (Math.floor(state.level / 5) * 50);
-
             if (state.score < currentBombCost) {
-                showToast("PAS ASSEZ DE POINTS ! (" + currentBombCost + " requis)");
-                playSfx(150, 'sawtooth', 0.2); // Son d'erreur
+                showToast("PAS ASSEZ DE POINTS !");
+                playSfx(150, 'sawtooth', 0.2);
                 return;
             }
-
-            // Confirmation et consommation des points
             state.score -= currentBombCost;
-            
-            // Effets visuels et physiques
             if (navigator.vibrate) navigator.vibrate(200);
             document.getElementById('game-ui').classList.add('shake');
             setTimeout(() => document.getElementById('game-ui').classList.remove('shake'), 300);
             
-            // Logique d'explosion (5 chiffres aléatoires)
             let t = state.nums.map((n, i) => typeof n === 'number' ? i : null).filter(n => n !== null);
             for(let i=0; i<Math.min(5, t.length); i++) {
                 let r = Math.floor(Math.random()*t.length);
-                state.nums[t[r]] = null; 
-                t.splice(r, 1);
+                state.nums[t[r]] = null; t.splice(r, 1);
             }
-
-            playSfx(100, 'sawtooth', 0.4);
+            sfxExplosion();
             showToast("-" + currentBombCost + " POINTS 💣");
             render();
-        }
-
-        function playSfx(f, t='sine', d=0.1, v=0.1) {
-            if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            if(audioCtx.state === 'suspended') audioCtx.resume();
-            const o = audioCtx.createOscillator(), g = audioCtx.createGain();
-            o.type = t; o.frequency.setValueAtTime(f, audioCtx.currentTime);
-            g.gain.setValueAtTime(v, audioCtx.currentTime);
-            g.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + d);
-            o.connect(g); g.connect(audioCtx.destination);
-            o.start(); o.stop(audioCtx.currentTime + d);
-        }
-
-        // 💣 SON EXPLOSION (Bruit blanc + chute de fréquence)
-        function sfxExplosion() {
-            if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            const d = 0.5;
-            const o = audioCtx.createOscillator(), g = audioCtx.createGain();
-            o.type = 'sawtooth';
-            o.frequency.setValueAtTime(150, audioCtx.currentTime);
-            o.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + d);
-            g.gain.setValueAtTime(0.2, audioCtx.currentTime);
-            g.gain.linearRampToValueAtTime(0, audioCtx.currentTime + d);
-            o.connect(g); g.connect(audioCtx.destination);
-            o.start(); o.stop(audioCtx.currentTime + d);
-        }
-
-        // 🎺 SON TROMPETTE (Harmoniques de cuivres)
-        function sfxVictory() {
-            const notes = [523.25, 523.25, 523.25, 698.46]; // Do, Do, Do, Fa
-            notes.forEach((f, i) => {
-                setTimeout(() => playSfx(f, 'sawtooth', 0.3, 0.1), i * 150);
-            });
-        }
-
-        // ✨ SON PAIRE ÉLIMINÉE (Arpège ascendant joyeux)
-        function sfxMatch() {
-            playSfx(440, 'sine', 0.1, 0.1);
-            setTimeout(() => playSfx(880, 'sine', 0.1, 0.08), 50);
-        }
-
-        // 🌬️ SON GLISSEMENT (Filtre de fréquence rapide)
-        function sfxSlide() {
-            playSfx(1200, 'sine', 0.3, 0.05);
-            // On simule le glissement par une chute rapide de pitch
         }
 
         if(localStorage.getItem('NM_Master_Save')) document.getElementById('res-btn').style.display = 'block';
